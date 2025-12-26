@@ -1,9 +1,26 @@
 name: build-uf2
+permissions:
+  contents: write
 on:
   push:
     tags:
       - v*
   workflow_dispatch:
+    inputs:
+      tag:
+        description: Release tag name (e.g. v0.1.0). 手动发布必须填写
+        required: true
+        type: string
+      prerelease:
+        description: 将该发布标记为预发布
+        required: false
+        type: boolean
+        default: false
+      draft:
+        description: 创建为草稿发布
+        required: false
+        type: boolean
+        default: false
 jobs:
   build:
     runs-on: ubuntu-latest
@@ -38,10 +55,23 @@ jobs:
         with:
           name: canokey_flash.uf2
           path: build/canokey_flash.uf2
-      - name: Release
+      - name: Release (tag push)
         uses: softprops/action-gh-release@v1
         if: startsWith(github.ref, 'refs/tags/')
         with:
           files: build/canokey_flash.uf2
+          generate_release_notes: true
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      - name: Release (manual dispatch)
+        uses: softprops/action-gh-release@v1
+        if: github.event_name == 'workflow_dispatch'
+        with:
+          tag_name: ${{ inputs.tag }}
+          target_commitish: ${{ github.sha }}
+          files: build/canokey_flash.uf2
+          draft: ${{ inputs.draft }}
+          prerelease: ${{ inputs.prerelease }}
+          generate_release_notes: true
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
