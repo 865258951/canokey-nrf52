@@ -1,0 +1,43 @@
+name: build-uf2
+on:
+  push:
+    tags:
+      - v*
+  workflow_dispatch:
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          submodules: true
+          fetch-depth: 0
+      - name: Setup dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y build-essential cmake python3 wget unzip gcc-arm-none-eabi binutils-arm-none-eabi libnewlib-arm-none-eabi
+      - name: Download nRF5 SDK 17.1.0
+        run: |
+          mkdir -p nrf_sdk
+          cd nrf_sdk
+          wget -O nRF5_SDK_17.1.0_ddde560.zip https://developer.nordicsemi.com/nRF5_SDK/nRF5_SDK_v17.1.0/nRF5_SDK_17.1.0_ddde560.zip
+          unzip -q nRF5_SDK_17.1.0_ddde560.zip
+      - name: Build UF2
+        run: |
+          git submodule update --init --recursive
+          mkdir -p build
+          cd build
+          cmake -DCROSS_COMPILE=/usr/bin/arm-none-eabi- -DCMAKE_TOOLCHAIN_FILE=../toolchain.cmake -DCMAKE_BUILD_TYPE=Release ..
+          make canokey_flash.uf2
+      - name: Upload artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: canokey_flash.uf2
+          path: build/canokey_flash.uf2
+      - name: Release
+        uses: softprops/action-gh-release@v1
+        if: startsWith(github.ref, 'refs/tags/')
+        with:
+          files: build/canokey_flash.uf2
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
