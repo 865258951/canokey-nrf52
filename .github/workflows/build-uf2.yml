@@ -18,10 +18,14 @@ jobs:
           sudo apt-get install -y build-essential cmake python3 wget unzip gcc-arm-none-eabi binutils-arm-none-eabi libnewlib-arm-none-eabi
       - name: Download nRF5 SDK 17.1.0
         run: |
+          set -e
           mkdir -p nrf_sdk
-          cd nrf_sdk
-          wget -O nRF5_SDK_17.1.0_ddde560.zip https://developer.nordicsemi.com/nRF5_SDK/nRF5_SDK_v17.1.0/nRF5_SDK_17.1.0_ddde560.zip
-          unzip -q nRF5_SDK_17.1.0_ddde560.zip
+          # 使用 GitHub 镜像仓库以避免官方站点的机器人验证与重定向导致的 404
+          if [ ! -d "nrf_sdk/nRF5_SDK_17.1.0_ddde560" ]; then
+            echo "Fetching nRF5 SDK from GitHub mirror..."
+            git clone --depth=1 https://github.com/cbraissant/nRF5_SDK_17.1.0_ddde560.git nrf_sdk/nRF5_SDK_17.1.0_ddde560 || \
+            git clone --depth=1 https://github.com/ZZT8688/nRF5_SDK_17.1.0_ddde560.git nrf_sdk/nRF5_SDK_17.1.0_ddde560
+          fi
       - name: Build UF2
         run: |
           git submodule update --init --recursive
